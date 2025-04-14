@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Check if branch name is lowercase
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [[ ! "$BRANCH" =~ ^[a-z0-9\-\/]+$ ]]; then
+  echo "ERROR: Branch name must be lowercase with optional hyphens, numbers, or forward slashes."
+  echo "Current branch name: $BRANCH"
+  exit 1
+fi
+
+# Check if trying to commit directly to main
+if [ "$BRANCH" = "main" ]; then
+  echo "ERROR: Direct commits to main branch are not allowed!"
+  echo "Please create a feature branch and submit a pull request instead."
+  exit 1
+fi
+
+# Run lint-staged
+npx lint-staged

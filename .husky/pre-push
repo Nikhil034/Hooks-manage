@@ -1,0 +1,30 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Check if pushing to main branch
+FORBIDDEN_BRANCH="main"
+PUSHED_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+if [ "$PUSHED_BRANCH" = "$FORBIDDEN_BRANCH" ]; then
+  echo "ERROR: Direct push to $FORBIDDEN_BRANCH branch is not allowed!"
+  echo "Please create a pull request instead."
+  exit 1
+fi
+
+# Run ESLint
+echo "Running ESLint..."
+npm run lint || { echo "ESLint failed!"; exit 1; }
+
+# Run Prettier check
+# echo "Running Prettier check..."
+# npx prettier --check "src/**/*.{js,jsx,ts,tsx}" || { echo "Prettier check failed!"; exit 1; }
+
+# Run Jest tests
+echo "Running tests..."
+npm test || { echo "Tests failed!"; exit 1; }
+
+# Check for build errors
+echo "Checking for build errors..."
+npm run build || { echo "Build failed!"; exit 1; }
+
+echo "✅ All checks passed!"
