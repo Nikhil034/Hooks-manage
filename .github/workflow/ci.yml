@@ -1,0 +1,71 @@
+# .github/workflows/ci.yml
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ '**' ]  # Run on all branch pushes
+  pull_request:
+    branches: [ main ]  # Run when PRs target main
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Validate branch name format
+        if: github.event_name == 'push'
+        run: |
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          if [[ ! "$BRANCH_NAME" =~ ^[a-z0-9\-\/]+$ ]]; then
+            echo "ERROR: Branch name must be lowercase with optional hyphens, numbers, or forward slashes."
+            echo "Current branch name: $BRANCH_NAME"
+            exit 1
+          fi
+          echo "✅ Branch name format is valid: $BRANCH_NAME"
+
+      - name: Block direct pushes to main
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          # Get the latest commit hash
+          COMMIT_HASH=$(git rev-parse HEAD)
+          
+          # Get commit message for this commit
+          COMMIT_MSG=$(git log -1 --pretty=format:%B)
+          
+          # Check if this is a merge commit (from PR)
+          if [[ "$COMMIT_MSG" != "Merge pull request"* ]]; then
+            echo "ERROR: Direct push to main branch detected!"
+            echo "Please create a pull request instead."
+            exit 1
+          fi
+          
+          echo "✅ This is a merge commit to main, which is allowed."
+
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Lint check
+        run: npm run lint
+        
+      - name: Run tests
+        run: npm test
+        
+      - name: Build check
+        run: npm run build
