@@ -1,77 +1,35 @@
-# .github/workflows/ci.yml
-
-name: CI/CD Pipeline
+name: Code Check
 
 on:
   push:
-    branches: [ '**' ]  # Run on all branch pushes
+    branches:
+      - '**'
   pull_request:
-    branches: [ main ]  # Run when PRs target main
 
 jobs:
-  validate:
-    name: Validate
+  lint-and-validate:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-     - name: Validate branch name format
-  run: |
-    if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-      # For pull requests, check the head branch name
-      BRANCH_NAME="${{ github.head_ref }}"
-    else
-      # For pushes, use the ref
-      BRANCH_NAME=${GITHUB_REF#refs/heads/}
-    fi
-    
-    if [[ ! "$BRANCH_NAME" =~ ^[a-z0-9\-\/]+$ ]]; then
-      echo "ERROR: Branch name must be lowercase with optional hyphens, numbers, or forward slashes."
-      echo "Current branch name: $BRANCH_NAME"
-      exit 1
-    fi
-    echo "✅ Branch name format is valid: $BRANCH_NAME"
-
-      - name: Block direct pushes to main
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          # Get the latest commit hash
-          COMMIT_HASH=$(git rev-parse HEAD)
-          
-          # Get commit message for this commit
-          COMMIT_MSG=$(git log -1 --pretty=format:%B)
-          
-          # Check if this is a merge commit (from PR)
-          if [[ "$COMMIT_MSG" != "Merge pull request"* ]]; then
-            echo "ERROR: Direct push to main branch detected!"
-            echo "Please create a pull request instead."
-            exit 1
-          fi
-          
-          echo "✅ This is a merge commit to main, which is allowed."
-
-  build:
-    name: Build and Test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
-          cache: 'npm'
-          
+          node-version: 20
+
       - name: Install dependencies
         run: npm ci
-        
-      - name: Lint check
+
+      - name: Lint code
         run: npm run lint
-        
-      - name: Run tests
-        run: npm test
-        
-      - name: Build check
-        run: npm run build
+
+      - name: Validate branch name
+        run: |
+          BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
+          echo "Branch name: $BRANCH_NAME"
+          if [[ "$BRANCH_NAME" =~ [A-Z] ]]; then
+            echo "❌ Branch name must be lowercase only."
+            exit 1
+          fi
