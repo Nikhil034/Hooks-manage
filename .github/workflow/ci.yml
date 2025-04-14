@@ -16,16 +16,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Validate branch name format
-        if: github.event_name == 'push'
-        run: |
-          BRANCH_NAME=${GITHUB_REF#refs/heads/}
-          if [[ ! "$BRANCH_NAME" =~ ^[a-z0-9\-\/]+$ ]]; then
-            echo "ERROR: Branch name must be lowercase with optional hyphens, numbers, or forward slashes."
-            echo "Current branch name: $BRANCH_NAME"
-            exit 1
-          fi
-          echo "✅ Branch name format is valid: $BRANCH_NAME"
+     - name: Validate branch name format
+  run: |
+    if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+      # For pull requests, check the head branch name
+      BRANCH_NAME="${{ github.head_ref }}"
+    else
+      # For pushes, use the ref
+      BRANCH_NAME=${GITHUB_REF#refs/heads/}
+    fi
+    
+    if [[ ! "$BRANCH_NAME" =~ ^[a-z0-9\-\/]+$ ]]; then
+      echo "ERROR: Branch name must be lowercase with optional hyphens, numbers, or forward slashes."
+      echo "Current branch name: $BRANCH_NAME"
+      exit 1
+    fi
+    echo "✅ Branch name format is valid: $BRANCH_NAME"
 
       - name: Block direct pushes to main
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
